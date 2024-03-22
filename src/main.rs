@@ -1,39 +1,35 @@
-use std::sync::Arc;
-use std::sync::Mutex;
-use std::thread;
-use std::thread::JoinHandle;
+use rand::Rng;
+use std::cmp::Ordering;
+use std::io;
 
-fn increment_counter(thread_name: char, m: Arc<Mutex<i32>>, reps: i32) {
-    for _ in 0..reps {
-        {
-            let mut val = m.lock().unwrap();
-            *val += 1;
-            if *val % 100 == 0 {
-                println!("Thread {} val {}", thread_name, *val);
+fn main() {
+    println!("Guess the number!");
+
+    let secret_number = rand::thread_rng().gen_range(1..=100);
+
+    loop {
+        println!("Please input your guess");
+
+        let mut guess = String::new();
+
+        io::stdin()
+            .read_line(&mut guess)
+            .expect("Failed to read line");
+
+        let guess: u32 = match guess.trim().parse() {
+            Ok(num) => num,
+            Err(_) => continue,
+        };
+
+        println!("You guessed: {guess}");
+
+        match guess.cmp(&secret_number) {
+            Ordering::Less => println!("Too small!"),
+            Ordering::Greater => println!("Too big!"),
+            Ordering::Equal => {
+                println!("You win!");
+                break;
             }
         }
     }
-}
-
-fn main() {
-    let counter: Arc<Mutex<i32>> = Arc::new(Mutex::new(0));
-    let iterations = 1000;
-
-    let mut handles: Vec<JoinHandle<()>> = Vec::new();
-    {
-        let x = Arc::clone(&counter);
-        let handle = thread::spawn(move || increment_counter('a', x, iterations));
-        handles.push(handle);
-    }
-    {
-        let y = Arc::clone(&counter);
-        let handle = thread::spawn(move || increment_counter('b', y, iterations));
-        handles.push(handle);
-    }
-
-    for handle in handles {
-        handle.join().unwrap();
-    }
-
-    println!("Result: {}", *counter.lock().unwrap());
 }
